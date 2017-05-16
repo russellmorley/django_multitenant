@@ -153,11 +153,6 @@ MULTITENANT_SOCKETS_HANDLERS = [
     "handler": "django_multitenant_sockets.chat.handlers",
     "handler_is_consumer_route_prefix": False,
   },
-  {
-    "msgtype": "chat",
-    "handler": "django_multitenant_sockets.chat.handlers",
-    "handler_is_consumer_route_prefix": False,
-  },
 ]
 '''
 {
