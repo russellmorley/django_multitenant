@@ -1,0 +1,26 @@
+from __future__ import unicode_literals
+from django.utils.encoding import python_2_unicode_compatible
+
+from django.db import models
+from django.contrib import auth
+
+@python_2_unicode_compatible
+class Practice(models.Model):
+  name = models.CharField(max_length=64, unique=True)
+
+  def __str__(self):
+    return 'Name: {}'.format(self.name)
+
+@python_2_unicode_compatible
+class User(auth.models.AbstractUser):
+  practice = models.ForeignKey(Practice, null=True)
+
+  def org_pk(self):
+    if self.practice is not None:
+      return self.practice.id
+    else:
+      return None
+
+  def __str__(self):
+    return 'Username: {}'.format(self.username)
+
