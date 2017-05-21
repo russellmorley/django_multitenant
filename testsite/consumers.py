@@ -1,4 +1,4 @@
-from ..decorators import has_permission_and_practice
+from django_multitenant_sockets.decorators import has_permission_and_org
 import logging
 import json
 
@@ -10,12 +10,12 @@ def connect(message):
 def disconnect(message):
   logger.debug('disconnect')
 
-@has_permission_and_practice('chat_interact')
+#@has_permission_and_org('chat_interact')
 def receive(message):
   logger.debug('receive: {}'.format(vars(message)))
   message.reply_channel.send({'text': message.content['text']})
-  #check authorization based on message.type and message.user.username[0].org_pk()
+  #check authorization based on message.type and message.user.org_pk()
 
-@has_permission_and_practice('chat_interact')
+#@has_permission_and_org('chat_interact')
 def send(message):
   pass

@@ -8,34 +8,34 @@ import json
 
 logger = logging.getLogger(__name__)
 
-if hasattr(settings,'MULTITENANT_SOCKETS_HANDLERS'):
-  handler_dicts = settings.MULTITENANT_SOCKETS_HANDLERS
+if hasattr(settings,'MULTITENANT_SOCKETS_CONSUMERS'):
+  consumer_dicts = settings.MULTITENANT_SOCKETS_CONSUMERS
 else:
-  handler_dicts = []
+  consumer_dicts = []
 
 @channel_session_user_from_http
 @can_connect()
 def connect(message):
   logger.debug('connect')
-  for handler_dict in handler_dicts:
+  for consumer_dict in consumer_dicts:
     if (
-      handler_dict.get('handler_is_consumer_route_prefix', None) is not None and 
-      handler_dict.get('handler_is_consumer_route_prefix')
+      consumer_dict.get('consumer_key_is_consumer_route_prefix', None) is not None and 
+      consumer_dict.get('consumer_key_is_consumer_route_prefix')
     ):
-      Channel('{}-connect'.format(handler_dict['handler'])).send(message.content)
+      Channel('{}-connect'.format(consumer_dict['consumer'])).send(message.content)
     else:
-      import_string(handler_dict['handler']).connect(message)
+      import_string('{}.{}'.format(consumer_dict['consumer'], 'connect'))(message)
 
 @channel_session_user
 def disconnect(message):
-  for handler_dict in reversed(handler_dicts):
+  for consumer_dict in reversed(consumer_dicts):
     if (
-      handler_dict.get('handler_is_consumer_route_prefix', None) is not None and 
-      handler_dict.get('handler_is_consumer_route_prefix')
+      consumer_dict.get('consumer_key_is_consumer_route_prefix', None) is not None and 
+      consumer_dict.get('consumer_key_is_consumer_route_prefix')
     ):
-      Channel('{}-disconnect'.format(handler_dict['handler'])).send(message.content)
+      Channel('{}-disconnect'.format(consumer_dict['consumer'])).send(message.content)
     else:
-      import_string(handler_dict['handler']).disconnect(message)
+      import_string('{}.{}'.format(consumer_dict['consumer'], 'disconnect'))(message)
   logger.debug('disconnect')
 
 @channel_session_user
@@ -45,14 +45,14 @@ def receive(message):
   text = message.content.get('text', None)
   if text is not None:
     text_dict = json.loads(text)
-    msgtype = text_dict.get('msgtype', None) 
-    if msgtype is not None:
-      filtered_handler_dicts = filter(lambda handler_dict: handler_dict['msgtype'] == msgtype, handler_dicts)
-      for handler_dict in filtered_handler_dicts:
+    stream = text_dict.get('stream', None) 
+    if stream is not None:
+      filtered_consumer_dicts = filter(lambda consumer_dict: consumer_dict['stream'] == stream, consumer_dicts)
+      for consumer_dict in filtered_consumer_dicts:
         if (
-          handler_dict.get('handler_is_consumer_route_prefix', None) is not None and 
-          handler_dict.get('handler_is_consumer_route_prefix')
+          consumer_dict.get('consumer_key_is_consumer_route_prefix', None) is not None and 
+          consumer_dict.get('consumer_key_is_consumer_route_prefix')
         ):
-          Channel('{}-receive'.format(handler_dict['handler'])).send(message.content)
+          Channel('{}-receive'.format(consumer_dict['consumer'])).send(message.content)
         else:
-          import_string(handler_dict['handler']).receive(message)
+          import_string('{}.{}'.format(consumer_dict['consumer'], 'receive'))(message)

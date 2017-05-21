@@ -142,23 +142,33 @@ LOGGING = {
       'handlers': ['console'],
       'level': 'DEBUG',
     },
+    'testsite': {
+      'handlers': ['console'],
+      'level': 'DEBUG',
+    },
   },
 }
 
 MULTITENANT_SOCKETS_PERMISSIONS_ADAPTER = "django_multitenant_sockets.adapters.PermissionsAdapter"
 
-MULTITENANT_SOCKETS_HANDLERS = [
+MULTITENANT_SOCKETS_USER_GET_ORG_PK_METHOD_NAME = 'org_pk'
+
+MULTITENANT_SOCKETS_CONSUMERS = [
   {
-    "msgtype": "chat",
-    "handler": "django_multitenant_sockets.chat.handlers",
-    "handler_is_consumer_route_prefix": False,
+    "stream": "test",
+    "consumer": "testsite.consumers",
+    "consumer_key_is_consumer_route_prefix": False,
   },
 ]
 '''
 {
-  "msgtype": "chat",
-  "handler": "chat",
-  "handler_is_consumer_route_prefix": True,
+  "stream": "test",
+  "consumer": "test",
+  "consumer_key_is_consumer_route_prefix": True,
 },
 '''
-
+MULTITENANT_SOCKETS_GENERICCONSUMERS = {
+  #stream_name: genericconsumer
+  'test': 'testsite.genericconsumers.TestMultitenantJsonWebsocketConsumer',
+  #"other": AnotherConsumer,
+}
