@@ -116,12 +116,6 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-CHANNEL_LAYERS = {
-  'default': {
-    'BACKEND': 'asgiref.inmemory.ChannelLayer',
-    'ROUTING': 'testsite.routing.routes',
-  },
-}
 
 LOGGING = {
   'version': 1,
@@ -146,6 +140,13 @@ LOGGING = {
       'handlers': ['console'],
       'level': 'DEBUG',
     },
+  },
+}
+
+CHANNEL_LAYERS = {
+  'default': {
+    'BACKEND': 'asgiref.inmemory.ChannelLayer',
+    'ROUTING': 'testsite.routing.routes',
   },
 }
 

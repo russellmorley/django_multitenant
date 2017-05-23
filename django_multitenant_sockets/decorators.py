@@ -1,6 +1,7 @@
 from functools import wraps
 from django.conf import settings
 from django.utils.module_loading import import_string
+from .channel import MultitenantUser, MultitenantOrg
 
 #Special permissions
 SUPER_ADMIN_ONLY = 'SUPER_ADMIN_ONLY'
@@ -33,11 +34,12 @@ def get_user_org_pk(user):
   get_org_pk_method = getattr(user, get_org_pk_method_name)
   return get_org_pk_method()
 
-def can_connect():
+def connect():
   def dec(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
       message = None
+      #find the message parameter.
       for arg in args:
         if (
           hasattr(arg, '__class__') and 
@@ -46,15 +48,55 @@ def can_connect():
           message = arg
           break 
       if message is not None:
-        if message.user.is_authenticated():
-          message.reply_channel.send({'accept': True})
-          return f(*args, **kwargs)
-        else:
+        try:
+          # user must be authenticated already
+          if message.user.is_authenticated():
+            orgid = get_user_org_pk(message.user)
+            MultitenantUser(message.user.pk, orgid).add(message.reply_channel)
+            if orgid is not None:
+              #add user's reply_channel to user's group
+              MultitenantOrg(orgid).add(message.reply_channel)
+            #add user's reply_channel to org
+            message.reply_channel.send({'accept': True})
+            return f(*args, **kwargs)
+          else:
+            message.reply_channel.send({'close': True})
+            return
+        except Exception:
           message.reply_channel.send({'close': True})
           return
       else:
         message.reply_channel.send({'close': True})
         return
+    return wrapper
+  return dec
+
+def disconnect():
+  def dec(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+      message = None
+      #find the message parameter.
+      for arg in args:
+        if (
+          hasattr(arg, '__class__') and 
+          '{}.{}'.format(arg.__class__.__module__, arg.__class__.__name__) == 'channels.message.Message'
+        ):
+          message = arg
+          break 
+      if message is not None:
+        orgid = get_user_org_pk(message.user)
+        multitenant_user = MultitenantUser(message.user.pk, orgid)
+        #for cases where connect() did not add reply channel
+        if message.reply_channel.name in multitenant_user.get_channels():
+          ret_val = f(*args, **kwargs)
+          #remove user's reply_channel from user's group
+          MultitenantUser(message.user.pk, orgid).discard(message.reply_channel)
+          if orgid is not None:
+            #remove user's reply_channel from org
+            MultitenantOrg(orgid).discard(message.reply_channel)
+          return ret_val
+      return
     return wrapper
   return dec
 

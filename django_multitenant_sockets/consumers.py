@@ -1,6 +1,6 @@
 from channels import Channel
 from channels.auth import channel_session_user, channel_session_user_from_http
-from .decorators import can_connect
+from .decorators import connect, disconnect
 from django.conf import settings
 from django.utils.module_loading import import_string
 import logging
@@ -14,7 +14,7 @@ else:
   consumer_dicts = []
 
 @channel_session_user_from_http
-@can_connect()
+@connect()
 def connect(message):
   logger.debug('connect')
   for consumer_dict in consumer_dicts:
@@ -27,6 +27,7 @@ def connect(message):
       import_string('{}.{}'.format(consumer_dict['consumer'], 'connect'))(message)
 
 @channel_session_user
+@disconnect()
 def disconnect(message):
   for consumer_dict in reversed(consumer_dicts):
     if (
