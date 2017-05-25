@@ -33,11 +33,16 @@ class MultitenantJsonWebsocketConsumer(JsonWebsocketConsumer):
   def disconnect_impl(self, message, multiplexer, **kwargs):
     pass
   
+  def raw_receive(self, message, **kwargs):
+    kwargs['user'] = message.user
+    super(MultitenantJsonWebsocketConsumer, self).raw_receive(message, **kwargs)
+
   def receive(self, content, multiplexer, **kwargs):
     logger.debug('receive: {}'.format(content))
     op = content.pop('op', None)
     for_org = content.pop('for_org', None)
-    self.receive_impl(op, for_org, content, multiplexer, **kwargs)
+    user = kwargs.pop('user', None)
+    self.receive_impl(user, op, for_org, content, multiplexer, **kwargs)
 
   def receive_impl(self, op, for_org, data_dict, multiplexer, **kwargs):
     pass

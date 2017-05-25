@@ -13,8 +13,8 @@ class TestMultitenantJsonWebsocketConsumer(MultitenantJsonWebsocketConsumer):
     logger.debug('disconnect_impl')
   
   #@has_permission_and_org('test_stream_access')
-  def receive_impl(self, op, for_org, data_dict, multiplexer, **kwargs):
-    logger.debug('receive: op:{}, for_org:{}, data_dict:{}'.format(op, for_org, data_dict))
+  def receive_impl(self, user, op, for_org, data_dict, multiplexer, **kwargs):
+    logger.debug('receive: user_id: {}, op:{}, for_org:{}, data_dict:{}'.format(user.pk, op, for_org, data_dict))
     # Simple echo
     multiplexer.send(op, data_dict)
 
