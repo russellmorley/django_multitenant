@@ -1,8 +1,8 @@
-#django_multitenant
+# django_multitenant
 
 **django_multitenant** is a set of apps for adding multitenant functionality to Django.
 
-##Features
+## Features
 
 * A library for adding multitenant functionality to Django Channels.
     * Provides both decorators for funcion-based consumers and a corresponding generic base class generic that:
@@ -11,8 +11,9 @@
         * creates a channel group for each org and assigns users to their appropriate channel group.
         * provides models for both org subgroups as well as public groups to which users can be assigned. Creates corresponding channel groups for all and manages assigment of users to their appropriate channel groups during connection and removes users on disconnect.
         * Optional functionality for disconnecting channels if a http user is logged out.
+     * Both function-based and generic class support multiplexing different applications (streams) across a single socket.
 
-##Installing
+## Installing
 
 You can install django_multitenant with the following command:
 
@@ -25,7 +26,7 @@ or by adding the following line to your requirement.txt:
 Check the [CHANGES](https://github.com/russellmorley/django_multitenant/blob/master/CHANGES)
 before installing.
 
-##Getting Started
+## Getting Started
 
 To run the example:
 
@@ -39,19 +40,51 @@ To run the example:
     if (socket.readyState == WebSocket.OPEN) socket.onopen();
 
 
-##Documentation
+## Documentation
 
-###django_multitentant_sockets app
+### django_multitentant_sockets app
 
-####Function-based consumers
+#### Function-based consumers
 
 * When wrapping a connect function, ``decorators.connect`` accepts connections if the django user is_authenticated() and adds the channel to the user's channel group, user's organization's channel group, all channel groups corresponding to the ``model.PublicGroup``s the user is a member of, and all channel groups corresponding to the ``model.OrgGroup``s the user is a member of.
 * Similarly, when wrapping a disconnect function ``decorators.disconnect`` removes the user from all channel groups and disconnects the socket.
+* Consumer provided automatically wraps functions with decorators as needed and delegates implementation to functions in a separate implementation module.
 
 Example:
 
+Settings:
 
-####Generic consumers
+MULTITENANT_SOCKETS_CONSUMERS = [
+     {
+       "stream": "test",
+       "consumer": "testsite.consumers",
+       "consumer_key_is_consumer_route_prefix": False,
+     },
+   ]
+
+Implementation Module:
+
+   from django_multitenant_sockets.decorators import has_permission_and_org
+   import logging
+   import json
+
+   logger = logging.getLogger(__name__)
+
+   def connect(message):
+     logger.debug('connect')
+
+   def disconnect(message):
+     logger.debug('disconnect')
+
+   def receive(message):
+     logger.debug('receive: {}'.format(vars(message)))
+     message.reply_channel.send({'text': message.content['text']})
+
+   def send(message):
+     pass
+  
+
+#### Generic consumers
 
 Generic consumers are derived from ``generic.consumers.MultitenantJsonWebsocketConsumer`` and:
 
@@ -75,28 +108,56 @@ Derivatives can override the following:
         
 Example
 
+Settings:
+
+   MULTITENANT_SOCKETS_GENERICCONSUMERS = {
+     #stream_name: test
+     'test': 'testsite.genericconsumers.TestMultitenantJsonWebsocketConsumer',
+     #"other": AnotherConsumer,
+   }
+
+Implementation module:
+
+   from django_multitenant_sockets.generic.consumers import MultitenantJsonWebsocketConsumer
+   from django_multitenant_sockets.decorators import has_permission_and_org
+
+   import logging
+   logger = logging.getLogger(__name__)
+
+   class TestMultitenantJsonWebsocketConsumer(MultitenantJsonWebsocketConsumer):
+     def connect_impl(self, message, multiplexer, **kwargs):
+       logger.debug('connect_impl')
+
+     def disconnect_impl(self, message, multiplexer, **kwargs):
+       logger.debug('disconnect_impl')
+
+     #@has_permission_and_org('test_stream_access')
+     def receive_impl(self, user, op, for_org, data_dict, multiplexer, **kwargs):
+       logger.debug('receive: user_id: {}, op:{}, for_org:{}, data_dict:{}'.format(user.pk, op, for_org, data_dict))
+       # Simple echo
+       multiplexer.send(op, data_dict)
+
+#### Other settings
+
+* ``MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME`` is the name of the organization foreign key attribute on users. This defaults to ``org`` if not set.
 
 
 
+## Testing
 
-
-Testing
-------------
 
 Run tests by first setting the database ROLE and PASSWORD in tests/test_settings.py then executing the following command:
 
     $./runtests.py
 
-Contributing
-------------
+## Contributing
 
 Bug reports, bug fixes, and new features are always welcome. Please raise issues on the
-`django_multitenant project site <https://github.com/russellmorley/django_multitenant>`_, and submit
+[django_multitenant project site](https://github.com/russellmorley/django_multitenant), and submit
 pull requests for any new code.
 
     
-More information
-----------------
+## More information
 
 The django_rest_cryptingfields project was developed by Russell Morley. You can get the code
 from the [django_multitenant project site](https://github.com/russellmorley/django_multitenant).
