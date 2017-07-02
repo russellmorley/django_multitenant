@@ -71,10 +71,13 @@ class MultitenantDemultiplexer(WebsocketDemultiplexer):
     consumers[key] = import_string(val)
 
   @classmethod
-  def send_to_user(cls, stream, user, op, data_dict):
-#    consumer_class = cls.consumers.get(stream, None)
-#    if consumer_class is not None and getattr(consumer_class, 'send_to_user_impl', None) is not None:
+  def send_to_channel(cls, stream, channel, op, data_dict):
+    multiplexer = cls.multiplexer_class(stream, channel)
+    multiplexer.send(op, data_dict) 
+    return True
 
+  @classmethod
+  def send_to_user(cls, stream, user, op, data_dict):
     org_pk = get_user_org_pk(user)
     group = MultitenantUser(message.user.pk, orgid)
     if group.exists():
@@ -82,7 +85,6 @@ class MultitenantDemultiplexer(WebsocketDemultiplexer):
       # with same signature.
       multiplexer = cls.multiplexer_class(stream, group)
       multiplexer.send(op, data_dict) 
-      #consumer_class.send_impl(multiplexer, op, data_dict)
       return True
     return False
 
