@@ -13,7 +13,6 @@ def disconnect(message):
 #@has_permission_and_org('chat_interact')
 def receive(message):
   logger.debug('receive: {}'.format(vars(message)))
-  import pdb; pdb.set_trace()
   message.reply_channel.send({'text': message.content['text']})
   #check authorization based on message.type and get_user_org_pk(message.user)
 
