@@ -53,6 +53,8 @@ if (socket.readyState == WebSocket.OPEN) socket.onopen();
 
 Example:
 
+For setting up a (multiplexed) application to have messages to application (stream) `test` sent to consumer `testsite/consumers.py`:
+
 Settings:
 
 ```python
@@ -65,7 +67,7 @@ MULTITENANT_SOCKETS_CONSUMERS = [
 ]
 ```
    
-Implementation Module:
+Implementation Module (testsite/consumers.py):
 
 ```python
 from django_multitenant_sockets.decorators import has_permission_and_org
@@ -112,6 +114,8 @@ Derivatives can override the following:
         
 Example
 
+For setting up a (multiplexed) application to have messages to application (stream) `test` sent to consumer `testsite/genericconsumers.py`:
+
 Settings:
 
 ```python
@@ -122,7 +126,7 @@ MULTITENANT_SOCKETS_GENERICCONSUMERS = {
 }
 ```
 
-Implementation module:
+Implementation module (testsite/genericconsumers.py):
 
 ```python
 from django_multitenant_sockets.generic.consumers import MultitenantJsonWebsocketConsumer
