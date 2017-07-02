@@ -30,6 +30,7 @@ before installing.
 
 To run the example:
 
+   ```javascript
     socket = new WebSocket("ws://localhost:8000/genericmultitenantsocket/'); 
     socket.onmessage = function(e) {
         alert(e.data); 
@@ -38,7 +39,7 @@ To run the example:
         socket.send(JSON.stringify({stream: "test", payload: {op:'do_stuff', for_org: 1, boo:'baa'}})); 
     } 
     if (socket.readyState == WebSocket.OPEN) socket.onopen();
-
+    ```
 
 ## Documentation
 
@@ -54,16 +55,19 @@ Example:
 
 Settings:
 
-MULTITENANT_SOCKETS_CONSUMERS = [
+   ```python
+   MULTITENANT_SOCKETS_CONSUMERS = [
      {
        "stream": "test",
        "consumer": "testsite.consumers",
        "consumer_key_is_consumer_route_prefix": False,
      },
    ]
-
+   ```
+   
 Implementation Module:
 
+   ```python
    from django_multitenant_sockets.decorators import has_permission_and_org
    import logging
    import json
@@ -82,7 +86,7 @@ Implementation Module:
 
    def send(message):
      pass
-  
+  ```
 
 #### Generic consumers
 
@@ -110,14 +114,17 @@ Example
 
 Settings:
 
+   ```python
    MULTITENANT_SOCKETS_GENERICCONSUMERS = {
      #stream_name: test
      'test': 'testsite.genericconsumers.TestMultitenantJsonWebsocketConsumer',
      #"other": AnotherConsumer,
    }
+   ```
 
 Implementation module:
 
+   ```python
    from django_multitenant_sockets.generic.consumers import MultitenantJsonWebsocketConsumer
    from django_multitenant_sockets.decorators import has_permission_and_org
 
@@ -136,7 +143,8 @@ Implementation module:
        logger.debug('receive: user_id: {}, op:{}, for_org:{}, data_dict:{}'.format(user.pk, op, for_org, data_dict))
        # Simple echo
        multiplexer.send(op, data_dict)
-
+      ```
+      
 #### Other settings
 
 * ``MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME`` is the name of the organization foreign key attribute on users. This defaults to ``org`` if not set.
