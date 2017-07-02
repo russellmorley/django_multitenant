@@ -2,8 +2,11 @@ from channels.generic.websockets import WebsocketDemultiplexer, WebsocketMultipl
 from django.conf import settings
 import logging
 from django.utils.module_loading import import_string
-from ..decorators import connect, disconnect, get_user_org_pk
-from ..channel import MultitenantUser, MultitenantOrg
+from ..decorators import (
+  connect, disconnect, get_user_org_pk, 
+  disconnect_if_http_logged_out as disconnect_if_http_logged_out_decorator
+)
+from ..channel import MultitenantUser, MultitenantOrg, MultitenantOrgGroup, MultitenantPublicGroup
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +17,8 @@ class MultitenantJsonWebsocketConsumer(JsonWebsocketConsumer):
   #self.path is always set to the current URL path
 
   #set strict_ordering = True if we want it
-  http_user = True #message.user same as request.user would be on a regular View
-  channel_session_user = True #provide message.channel_session and message.user on the message object
+  http_user_and_session = True #equivalent to auth.channel_and_http_session_user_from_http
+  disconnect_if_http_logged_out = True
 
   @connect()
   def connect(self, message, multiplexer, **kwargs):
@@ -34,8 +37,12 @@ class MultitenantJsonWebsocketConsumer(JsonWebsocketConsumer):
     pass
   
   def raw_receive(self, message, **kwargs):
+
     kwargs['user'] = message.user
-    super(MultitenantJsonWebsocketConsumer, self).raw_receive(message, **kwargs)
+    if self.disconnect_if_http_logged_out:
+      disconnect_if_http_logged_out_decorator()(super(MultitenantJsonWebsocketConsumer, self).raw_receive)(message, **kwargs)
+    else:
+      super(MultitenantJsonWebsocketConsumer, self).raw_receive(message, **kwargs)
 
   def receive(self, content, multiplexer, **kwargs):
     logger.debug('receive: {}'.format(content))
@@ -69,11 +76,11 @@ class MultitenantDemultiplexer(WebsocketDemultiplexer):
 #    if consumer_class is not None and getattr(consumer_class, 'send_to_user_impl', None) is not None:
 
     org_pk = get_user_org_pk(user)
-    user_group = MultitenantUser(message.user.pk, orgid)
-    if user_group.exists():
+    group = MultitenantUser(message.user.pk, orgid)
+    if group.exists():
       #can use multiplexer by pretending reply_channel is a group since both have send() method
       # with same signature.
-      multiplexer = self.multiplexer_class(stream, user_group)
+      multiplexer = cls.multiplexer_class(stream, group)
       multiplexer.send(op, data_dict) 
       #consumer_class.send_impl(multiplexer, op, data_dict)
       return True
@@ -81,11 +88,33 @@ class MultitenantDemultiplexer(WebsocketDemultiplexer):
 
   @classmethod
   def send_to_org(cls, stream, orgid, op, data_dict):
-    org_group = MultitenantOrg(orgid)
-    if org_group.exists():
+    group = MultitenantOrg(orgid)
+    if group.exists():
       #can use multiplexer by pretending reply_channel is a group since both have send() method
       # with same signature.
-      multiplexer = self.multiplexer_class(stream, org_group)
+      multiplexer = cls.multiplexer_class(stream, group)
+      multiplexer.send(op, data_dict)
+      return True
+    return False
+
+  @classmethod
+  def send_to_public_group(cls, stream, public_group_name, op, data_dict):
+    group = MultitenantPublicGroup(public_group_name)
+    if group.exists():
+      #can use multiplexer by pretending reply_channel is a group since both have send() method
+      # with same signature.
+      multiplexer = cls.multiplexer_class(stream, group)
+      multiplexer.send(op, data_dict)
+      return True
+    return False
+
+  @classmethod
+  def send_to_org_group(cls, stream, org_group_name, orgid, op, data_dict):
+    group = MultitenantOrgGroup(org_group_name, orgid)
+    if group.exists():
+      #can use multiplexer by pretending reply_channel is a group since both have send() method
+      # with same signature.
+      multiplexer = cls.multiplexer_class(stream, group)
       multiplexer.send(op, data_dict)
       return True
     return False

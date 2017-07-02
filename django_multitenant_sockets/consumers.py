@@ -1,5 +1,5 @@
 from channels import Channel
-from channels.auth import channel_session_user, channel_session_user_from_http
+from channels.auth import channel_session_user, channel_and_http_session_user_from_http
 from .decorators import connect, disconnect
 from django.conf import settings
 from django.utils.module_loading import import_string
@@ -13,7 +13,7 @@ if hasattr(settings,'MULTITENANT_SOCKETS_CONSUMERS'):
 else:
   consumer_dicts = []
 
-@channel_session_user_from_http
+@channel_and_http_session_user_from_http
 @connect()
 def connect(message):
   logger.debug('connect')

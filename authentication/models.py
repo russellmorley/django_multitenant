@@ -15,12 +15,6 @@ class Practice(models.Model):
 class User(auth.models.AbstractUser):
   practice = models.ForeignKey(Practice, null=True)
 
-  def org_pk(self):
-    if self.practice is not None:
-      return self.practice.id
-    else:
-      return None
-
   def __str__(self):
     return 'Username: {}'.format(self.username)
 

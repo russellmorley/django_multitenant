@@ -1,7 +1,9 @@
 from functools import wraps
+from django.apps import apps
 from django.conf import settings
 from django.utils.module_loading import import_string
-from .channel import MultitenantUser, MultitenantOrg
+from .channel import MultitenantUser, MultitenantOrg, MultitenantOrgGroup, MultitenantPublicGroup
+from copy import copy
 
 #Special permissions
 SUPER_ADMIN_ONLY = 'SUPER_ADMIN_ONLY'
@@ -25,14 +27,17 @@ if hasattr(settings, 'MULTITENANT_SOCKETS_PERMISSIONS_ADAPTER'):
 else:
   from .permissions_adapter import has_role, has_permission, SUPERADMIN_ROLE_NAME, PRACTICEADMIN_ROLE_NAME
 
-if hasattr(settings, 'MULTITENANT_SOCKETS_USER_GET_ORG_PK_METHOD_NAME'):
-  get_org_pk_method_name = getattr(settings, 'MULTITENANT_SOCKETS_USER_GET_ORG_PK_METHOD_NAME')
+if hasattr(settings, 'MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME'):
+  user_org_fk_attr_name = getattr(settings, 'MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME')
 else:
-  get_org_pk_method_name = 'org_pk'
+  user_org_fk_attr_name = 'org'
 
 def get_user_org_pk(user):
-  get_org_pk_method = getattr(user, get_org_pk_method_name)
-  return get_org_pk_method()
+  user_org = getattr(user, user_org_fk_attr_name, None)
+  if user_org is not None:
+    return user_org.pk
+  else:
+    return None
 
 def connect():
   def dec(f):
@@ -52,11 +57,25 @@ def connect():
           # user must be authenticated already
           if message.user.is_authenticated():
             orgid = get_user_org_pk(message.user)
+            #add user's reply_channel to user's group
             MultitenantUser(message.user.pk, orgid).add(message.reply_channel)
+
+            #Get all public groups the user is a member of and add user's reply_channel to each public group
+            PublicGroup = apps.get_model('django_multitenant_sockets.PublicGroup')
+            public_groups = PublicGroup.objects.filter(members__id=message.user.pk)
+            for public_group in public_groups:
+              MultitenantPublicGroup(public_group.name).add(message.reply_channel)
+              
             if orgid is not None:
-              #add user's reply_channel to user's group
+              #add user's reply_channel to org
               MultitenantOrg(orgid).add(message.reply_channel)
-            #add user's reply_channel to org
+
+              #Get all org groups the user is a member of and add user's reply_channel to each org group
+              OrgGroup = apps.get_model('django_multitenant_sockets.OrgGroup')
+              org_groups = OrgGroup.objects.filter(members__id=message.user.pk, org=orgid)
+              for org_group in org_groups:
+                MultitenantOrgGroup(org_group.name, orgid).add(message.reply_channel)
+
             message.reply_channel.send({'accept': True})
             return f(*args, **kwargs)
           else:
@@ -92,14 +111,81 @@ def disconnect():
           ret_val = f(*args, **kwargs)
           #remove user's reply_channel from user's group
           MultitenantUser(message.user.pk, orgid).discard(message.reply_channel)
+
+          #Get all public groups the user is a member of and discard user's reply_channel to each public group
+          PublicGroup = apps.get_model('django_multitenant_sockets.PublicGroup')
+          public_groups = PublicGroup.objects.filter(members__id=message.user.pk)
+          for public_group in public_groups:
+            MultitenantPublicGroup(public_group.name).discard(message.reply_channel)
+
           if orgid is not None:
             #remove user's reply_channel from org
             MultitenantOrg(orgid).discard(message.reply_channel)
+
+            #Get all org groups the user is a member of and discard user's reply_channel to each org group
+            OrgGroup = apps.get_model('django_multitenant_sockets.OrgGroup')
+            org_groups = OrgGroup.objects.filter(members__id=message.user.pk, org=orgid)
+            for org_group in org_groups:
+              MultitenantOrgGroup(org_group.name, orgid).discard(message.reply_channel)
+
           return ret_val
       return
     return wrapper
   return dec
 
+def disconnect_if_http_logged_out():
+  def dec(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+      message = None
+      #find the message parameter.
+      for arg in args:
+        if (
+          hasattr(arg, '__class__') and 
+          '{}.{}'.format(arg.__class__.__module__, arg.__class__.__name__) == 'channels.message.Message'
+        ):
+          message = arg
+          break 
+      if message is not None:
+        if message.http_session.get('_auth_user_id', None) is None:
+          if ( 
+            hasattr(message, 'user') and 
+            message.user is not None
+          ):
+            orgid = get_user_org_pk(message.user)
+            multitenant_user = MultitenantUser(message.user.pk, orgid)
+
+            #Get all public groups the user is a member of and discard user's reply_channel to each public group
+            PublicGroup = apps.get_model('django_multitenant_sockets.PublicGroup')
+            public_groups = PublicGroup.objects.filter(members__id=message.user.pk)
+
+            if orgid is not None:
+              #Get all org groups the user is a member of and discard user's reply_channel to each org group
+              OrgGroup = apps.get_model('django_multitenant_sockets.OrgGroup')
+              org_groups = OrgGroup.objects.filter(members__id=message.user.pk, org=orgid)
+
+            channels = copy(multitenant_user.get_channels())
+            for channel in channels:
+              #remove channels from user
+              multitenant_user.discard(channel)                
+              #remove each user channel from each public group
+              for public_group in public_groups:
+                MultitenantPublicGroup(public_group.name).discard(channnel)
+
+              if orgid is not None:
+                #remove each user channel from org
+                MultitenantOrg(orgid).discard(channel)
+                #remove each user channel from each org group
+                for org_group in org_groups:
+                  MultitenantOrgGroup(org_group.name, orgid).discard(message.reply_channel)
+              #close each user channel
+              message.reply_channel.send({'close': True})
+          return
+        else: #session _auth_user_id set
+          return f(*args, **kwargs)
+      return
+    return wrapper
+  return dec
 
 def has_permission_and_org(permission_to_msgtype_for_org):
   def dec(f):

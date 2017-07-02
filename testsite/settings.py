@@ -25,7 +25,7 @@ SECRET_KEY = 'ws5ra+w07flc51g#g33j@s@4@$bd%sv=umvuqvhl1yd)j92iyo'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = (
     'django.contrib.admin',
@@ -152,7 +152,7 @@ CHANNEL_LAYERS = {
 
 MULTITENANT_SOCKETS_PERMISSIONS_ADAPTER = "django_multitenant_sockets.adapters.PermissionsAdapter"
 
-MULTITENANT_SOCKETS_USER_GET_ORG_PK_METHOD_NAME = 'org_pk'
+MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME = 'practice'
 
 MULTITENANT_SOCKETS_CONSUMERS = [
   {
@@ -169,7 +169,7 @@ MULTITENANT_SOCKETS_CONSUMERS = [
 },
 '''
 MULTITENANT_SOCKETS_GENERICCONSUMERS = {
-  #stream_name: genericconsumer
+  #stream_name: test
   'test': 'testsite.genericconsumers.TestMultitenantJsonWebsocketConsumer',
   #"other": AnotherConsumer,
 }

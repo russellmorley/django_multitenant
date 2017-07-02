@@ -1,11 +1,13 @@
 from django_multitenant_sockets.generic.consumers import MultitenantJsonWebsocketConsumer
-from django_multitenant_sockets.decorators import has_permission_and_org
+from django_multitenant_sockets.decorators import has_permission_and_org, disconnect_if_http_logged_out
 
 import logging
 logger = logging.getLogger(__name__)
 
 
 class TestMultitenantJsonWebsocketConsumer(MultitenantJsonWebsocketConsumer):
+  #disconnect_if_http_logged_out = False
+
   def connect_impl(self, message, multiplexer, **kwargs):
     logger.debug('connect_impl')
 

@@ -3,15 +3,16 @@ from django.http import Http404
 
 from .models import PublicGroup, OrgGroup
 from .serializers import PublicGroupSerializer, OrgGroupSerializer
+from .decorators import get_user_org_pk
 
 class CanAccessOrgGroup(permissions.BasePermission):
   def has_permission(self, request, view):
-    if request.user.is_staff or view.org_pk() == request.user.org_pk():
+    if request.user.is_staff or view.org_pk() == get_user_org_pk(request.user):
       return True
     else:
       return False
   def has_object_permission(self, request, view, obj):
-    if request.user.is_staff or obj.org_pk() == request.user.org_pk():
+    if request.user.is_staff or obj.org.pk == get_user_org_pk(request.user):
       return True
     else:
       return False
