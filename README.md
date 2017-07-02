@@ -30,16 +30,16 @@ before installing.
 
 To run the example:
 
-   ```javascript
-    socket = new WebSocket("ws://localhost:8000/genericmultitenantsocket/'); 
-    socket.onmessage = function(e) {
-        alert(e.data); 
-    } 
-    socket.onopen = function() {
-        socket.send(JSON.stringify({stream: "test", payload: {op:'do_stuff', for_org: 1, boo:'baa'}})); 
-    } 
-    if (socket.readyState == WebSocket.OPEN) socket.onopen();
-    ```
+```javascript
+socket = new WebSocket("ws://localhost:8000/genericmultitenantsocket/"); 
+socket.onmessage = function(e) {
+    alert(e.data); 
+} 
+socket.onopen = function() {
+    socket.send(JSON.stringify({stream: "test", payload: {op:'do_stuff', for_org: 1, boo:'baa'}})); 
+} 
+if (socket.readyState == WebSocket.OPEN) socket.onopen();
+```
 
 ## Documentation
 
@@ -55,38 +55,38 @@ Example:
 
 Settings:
 
-   ```python
-   MULTITENANT_SOCKETS_CONSUMERS = [
-     {
-       "stream": "test",
-       "consumer": "testsite.consumers",
-       "consumer_key_is_consumer_route_prefix": False,
-     },
-   ]
-   ```
+```python
+MULTITENANT_SOCKETS_CONSUMERS = [
+  {
+    "stream": "test",
+    "consumer": "testsite.consumers",
+    "consumer_key_is_consumer_route_prefix": False,
+  },
+]
+```
    
 Implementation Module:
 
-   ```python
-   from django_multitenant_sockets.decorators import has_permission_and_org
-   import logging
-   import json
+```python
+from django_multitenant_sockets.decorators import has_permission_and_org
+import logging
+import json
 
-   logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-   def connect(message):
-     logger.debug('connect')
+def connect(message):
+  logger.debug('connect')
 
-   def disconnect(message):
-     logger.debug('disconnect')
+def disconnect(message):
+  logger.debug('disconnect')
 
-   def receive(message):
-     logger.debug('receive: {}'.format(vars(message)))
-     message.reply_channel.send({'text': message.content['text']})
+def receive(message):
+  logger.debug('receive: {}'.format(vars(message)))
+  message.reply_channel.send({'text': message.content['text']})
 
-   def send(message):
-     pass
-  ```
+def send(message):
+  pass
+```
 
 #### Generic consumers
 
@@ -114,40 +114,40 @@ Example
 
 Settings:
 
-   ```python
-   MULTITENANT_SOCKETS_GENERICCONSUMERS = {
-     #stream_name: test
-     'test': 'testsite.genericconsumers.TestMultitenantJsonWebsocketConsumer',
-     #"other": AnotherConsumer,
-   }
-   ```
+```python
+MULTITENANT_SOCKETS_GENERICCONSUMERS = {
+  #stream_name: test
+  'test': 'testsite.genericconsumers.TestMultitenantJsonWebsocketConsumer',
+  #"other": AnotherConsumer,
+}
+```
 
 Implementation module:
 
-   ```python
-   from django_multitenant_sockets.generic.consumers import MultitenantJsonWebsocketConsumer
-   from django_multitenant_sockets.decorators import has_permission_and_org
+```python
+from django_multitenant_sockets.generic.consumers import MultitenantJsonWebsocketConsumer
+from django_multitenant_sockets.decorators import has_permission_and_org
 
-   import logging
-   logger = logging.getLogger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
-   class TestMultitenantJsonWebsocketConsumer(MultitenantJsonWebsocketConsumer):
-     def connect_impl(self, message, multiplexer, **kwargs):
-       logger.debug('connect_impl')
+class TestMultitenantJsonWebsocketConsumer(MultitenantJsonWebsocketConsumer):
+ def connect_impl(self, message, multiplexer, **kwargs):
+   logger.debug('connect_impl')
 
-     def disconnect_impl(self, message, multiplexer, **kwargs):
-       logger.debug('disconnect_impl')
+ def disconnect_impl(self, message, multiplexer, **kwargs):
+   logger.debug('disconnect_impl')
 
-     #@has_permission_and_org('test_stream_access')
-     def receive_impl(self, user, op, for_org, data_dict, multiplexer, **kwargs):
-       logger.debug('receive: user_id: {}, op:{}, for_org:{}, data_dict:{}'.format(user.pk, op, for_org, data_dict))
-       # Simple echo
-       multiplexer.send(op, data_dict)
-      ```
+ #@has_permission_and_org('test_stream_access')
+ def receive_impl(self, user, op, for_org, data_dict, multiplexer, **kwargs):
+   logger.debug('receive: user_id: {}, op:{}, for_org:{}, data_dict:{}'.format(user.pk, op, for_org, data_dict))
+   # Simple echo
+   multiplexer.send(op, data_dict)
+  ```
       
 #### Other settings
 
-* ``MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME`` is the name of the organization foreign key attribute on users. This defaults to ``org`` if not set.
+* `MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME` is the name of the organization foreign key attribute on users. This defaults to ``org`` if not set.
 
 
 
