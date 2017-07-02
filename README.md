@@ -28,7 +28,7 @@ before installing.
 
 ## Getting Started
 
-To run the example:
+To send a message to application `test` to `do_stuff(boo=bah)` for org 1, receive a message back, and show it in an alert:
 
 ```javascript
 socket = new WebSocket("ws://localhost:8000/genericmultitenantsocket/"); 
@@ -53,7 +53,7 @@ if (socket.readyState == WebSocket.OPEN) socket.onopen();
 
 Example:
 
-For setting up a (multiplexed) application to have messages to application (stream) `test` sent to consumer `testsite/consumers.py`:
+For setting up a (multiplexed) application to have messages sent to application (stream) `test` directed to consumer `testsite/consumers.py`:
 
 Settings:
 
@@ -114,7 +114,7 @@ Derivatives can override the following:
         
 Example
 
-For setting up a (multiplexed) application to have messages to application (stream) `test` sent to consumer `testsite/genericconsumers.py`:
+For setting up a (multiplexed) application to have messages sent to application (stream) `test` directed to consumer `testsite/genericconsumers.py`:
 
 Settings:
 
