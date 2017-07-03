@@ -1,4 +1,4 @@
-from django_multitenant_sockets.decorators import has_permission_and_org, disconnect_if_http_logged_out_decorator
+from django_multitenant_sockets.decorators import has_permission_and_org, disconnect_if_http_logged_out
 import logging
 import json
 
@@ -10,13 +10,12 @@ def connect(message):
 def disconnect(message):
   logger.debug('disconnect')
 
-#@has_permission_and_org('chat_interact')
-@disconnect_if_http_logged_out_decorator()
+@disconnect_if_http_logged_out()
+@has_permission_and_org({'do_stuff': 'do_stuff_permission'})
 def receive(message):
   logger.debug('receive: {}'.format(vars(message)))
   message.reply_channel.send({'text': message.content['text']})
   #check authorization based on message.type and get_user_org_pk(message.user)
 
-#@has_permission_and_org('chat_interact')
 def send(message):
   pass
