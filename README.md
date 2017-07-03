@@ -6,7 +6,8 @@
 
 * A library for adding multitenant functionality to Django Channels.
     * Provides both decorators for funcion-based consumers and a corresponding generic base class generic that:
-        * authenticates the user and authorizes message operations (`op`).
+        * validates the user has been authenticated for both connect and all received messages.
+        * authorizes received message based on the operation requested.
         * sets the sessions and user on the message.
         * creates a channel group for each user.
         * creates a channel group for each org and assigns users to their appropriate channel group.
