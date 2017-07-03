@@ -6,6 +6,7 @@
 
 * A library for adding multitenant functionality to Django Channels.
     * Provides both decorators for funcion-based consumers and a corresponding generic base class generic that:
+        * authenticates the user and authorizes message operations (`op`).
         * sets the sessions and user on the message.
         * creates a channel group for each user.
         * creates a channel group for each org and assigns users to their appropriate channel group.
@@ -23,10 +24,25 @@ or by adding the following line to your requirement.txt:
 
     --e git+https://github.com/russellmorley/django_multitenant#django_multitenant
 
+Channels is dependent on:
+
+```
+django>=1.8.18
+channels>=1.1.3
+djangorestframework>=3.4.1
+```
+
 Check the [CHANGES](https://github.com/russellmorley/django_multitenant/blob/master/CHANGES)
 before installing.
 
 ## Getting Started
+
+Start the channels server:
+
+```
+python manage.py migrage
+python manage.py runserver 0.0.0.0:8000
+```
 
 To send a message to application `test` to `do_stuff(boo=bah)` for org 1, receive a message back, and show it in an alert:
 
@@ -44,6 +60,21 @@ if (socket.readyState == WebSocket.OPEN) socket.onopen();
 ## Documentation
 
 ### django_multitentant_sockets app
+
+#### Message text format
+
+```python
+{
+   #identifies the application. messages over a single socket are routed to appropriate consumers based on stream. See settings for both a consumer and genericconsumer below.
+   stream: "test",   
+
+   payload: {
+         op:'do_stuff',  #denotes the operation the client is requesting of server. Required for authorization 
+         for_org: 1,     #denotes the org the operation is to be performed on. This should typically be the same org as the calling user's
+         boo:'baa'       #the 'parameters' of the op added as additional key/values of data
+   }
+}
+```
 
 #### Function-based consumers
 
@@ -82,12 +113,11 @@ def connect(message):
 def disconnect(message):
   logger.debug('disconnect')
 
+@disconnect_if_http_logged_out()
+@has_permission_and_org({'do_stuff': 'do_stuff_permission'})
 def receive(message):
   logger.debug('receive: {}'.format(vars(message)))
   message.reply_channel.send({'text': message.content['text']})
-
-def send(message):
-  pass
 ```
 
 #### Generic consumers
@@ -142,18 +172,33 @@ class TestMultitenantJsonWebsocketConsumer(MultitenantJsonWebsocketConsumer):
  def disconnect_impl(self, message, multiplexer, **kwargs):
    logger.debug('disconnect_impl')
 
- #@has_permission_and_org('test_stream_access')
+ @has_permission_and_org({'do_stuff': 'do_stuff_permission'})
  def receive_impl(self, user, op, for_org, data_dict, multiplexer, **kwargs):
    logger.debug('receive: user_id: {}, op:{}, for_org:{}, data_dict:{}'.format(user.pk, op, for_org, data_dict))
    # Simple echo
    multiplexer.send(op, data_dict)
   ```
-      
+   
+#### Authorization
+
+Receive methods should authorize the `ops` of all incoming messages from clients by adding the following decorator, which takes a dictionary of all the operations the receive method can handle mapped to permission_name values:
+
+```python
+@has_permission_and_org({'do_stuff': 'do_stuff_permission'})
+def receive_impl(self, user, op, for_org, data_dict, multiplexer, **kwargs):
+   pass
+```
+
+This decorator authorizes each op by confirming the calling user has been assigned the corresponding permission_name using a permissions adapter set as follows. If the `op` is not in the dict the call is not authorized.
+
+Settings:
+```
+MULTITENANT_SOCKETS_PERMISSIONS_ADAPTER` = [the name of the class that contains a method `has_permission(user, permission)` and `has_role(user, role)`]
+```
+
 #### Other settings
 
 * `MULTITENANT_SOCKETS_USER_ORG_FK_ATTR_NAME` is the name of the organization foreign key attribute on users. This defaults to ``org`` if not set.
-
-
 
 ## Testing
 
