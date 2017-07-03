@@ -1,4 +1,4 @@
-from django_multitenant_sockets.decorators import has_permission_and_org
+from django_multitenant_sockets.decorators import has_permission_and_org, disconnect_if_http_logged_out_decorator
 import logging
 import json
 
@@ -11,6 +11,7 @@ def disconnect(message):
   logger.debug('disconnect')
 
 #@has_permission_and_org('chat_interact')
+@disconnect_if_http_logged_out_decorator()
 def receive(message):
   logger.debug('receive: {}'.format(vars(message)))
   message.reply_channel.send({'text': message.content['text']})
