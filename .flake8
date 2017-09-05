@@ -1,0 +1,6 @@
+
+; http://pep8.readthedocs.io/en/latest/intro.html
+
+[flake8]
+ignore = E111, E114, E121, E123, E124, E128, E131, E133, E203, E221, E303, E402, E901
+max-line-length = 120

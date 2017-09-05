@@ -1,5 +1,6 @@
-from channels.routing import route, include
-import consumers
+
+from . import consumers
+from channels.routing import route
 
 routes = [
   route("websocket.connect", consumers.connect),
