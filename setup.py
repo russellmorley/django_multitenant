@@ -19,9 +19,6 @@ setup(
   ],
   description="Generic sockets server implementation for multitenant sites.",
   install_requires=[
-    "django>=1.8.14",
-    "channels>=1.1.3",
-    "djangorestframework>=3.4.1"
   ],
   keywords="channels sockets django",
   license="MIT",
